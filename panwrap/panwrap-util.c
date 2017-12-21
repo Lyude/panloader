@@ -93,7 +93,7 @@ panwrap_log_hexdump(const void *data, size_t size)
 
 		if ((i % HEXDUMP_ROW_LEN) == HEXDUMP_ROW_LEN - 1) {
 			alpha[HEXDUMP_ROW_LEN] = 0;
-			panwrap_log_cont("\t|%s|\n", alpha);
+			panwrap_log_cont("  |%s|\n", alpha);
 		}
 	}
 
@@ -104,7 +104,7 @@ panwrap_log_hexdump(const void *data, size_t size)
 
 			if (i == HEXDUMP_ROW_LEN - 1) {
 				alpha[HEXDUMP_ROW_LEN] = 0;
-				panwrap_log_cont("\t|%s|\n", alpha);
+				panwrap_log_cont("  |%s|\n", alpha);
 			}
 		}
 	}
@@ -302,6 +302,15 @@ void
 panwrap_log_flush()
 {
 	fflush(log_output);
+}
+
+/* Some functions for debugging in gdb */
+void *
+panwrap_download_mem(void *p, size_t s)
+{
+	void *cpy = malloc(s);
+	memcpy(cpy, p, s);
+	return cpy;
 }
 
 static bool

@@ -19,6 +19,7 @@
 #include <list.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <assert.h>
 #include "panwrap.h"
 
 struct panwrap_allocated_memory {
@@ -49,17 +50,26 @@ struct panwrap_mapped_memory *panwrap_find_mapped_mem_containing(void *addr);
 struct panwrap_mapped_memory *panwrap_find_mapped_gpu_mem(mali_ptr addr);
 struct panwrap_mapped_memory *panwrap_find_mapped_gpu_mem_containing(mali_ptr addr);
 
+void panwrap_assert_gpu_same(const struct panwrap_mapped_memory *mem,
+			     mali_ptr gpu_va, size_t size,
+			     const unsigned char *data);
+void panwrap_assert_gpu_mem_zero(const struct panwrap_mapped_memory *mem,
+				 mali_ptr gpu_va, size_t size);
+
 void __attribute__((noreturn))
 __panwrap_deref_mem_err(const struct panwrap_mapped_memory *mem,
 			mali_ptr gpu_va, size_t size,
 			int line, const char *filename);
 
-static inline void * __attribute__((nonnull(1)))
+static inline void *
 __panwrap_deref_gpu_mem(const struct panwrap_mapped_memory *mem,
 			mali_ptr gpu_va, size_t size,
 			int line, const char *filename)
 {
-	if (size + (gpu_va - mem->gpu_va) > mem->length)
+	if (!mem)
+		mem = panwrap_find_mapped_gpu_mem_containing(gpu_va);
+
+	if (!mem || size + (gpu_va - mem->gpu_va) > mem->length)
 		__panwrap_deref_mem_err(mem, gpu_va, size, line, filename);
 
 	return (void*)gpu_va + (ptrdiff_t)((void*)mem->gpu_va - mem->addr);
@@ -67,5 +77,9 @@ __panwrap_deref_gpu_mem(const struct panwrap_mapped_memory *mem,
 
 #define panwrap_deref_gpu_mem(mem, gpu_va, size) \
 	__panwrap_deref_gpu_mem(mem, gpu_va, size, __LINE__, __FILE__)
+
+#define PANWRAP_PTR(mem, gpu_va, type) \
+	((type*)(__panwrap_deref_gpu_mem(mem, gpu_va, sizeof(type), \
+					 __LINE__, __FILE__)))
 
 #endif /* __MMAP_TRACE_H__ */

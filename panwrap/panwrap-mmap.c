@@ -173,6 +173,49 @@ struct panwrap_mapped_memory *panwrap_find_mapped_gpu_mem_containing(mali_ptr ad
 	return NULL;
 }
 
+void
+panwrap_assert_gpu_same(const struct panwrap_mapped_memory *mem,
+			mali_ptr gpu_va, size_t size,
+			const unsigned char *data)
+{
+	const char *buffer = panwrap_deref_gpu_mem(mem, gpu_va, size);
+
+	for (size_t i = 0; i < size; i++) {
+		if (buffer[i] != data[i]) {
+			panwrap_log("At " MALI_PTR_FORMAT ", expected:\n",
+				    gpu_va);
+			panwrap_indent++;
+			panwrap_log_hexdump_trimmed(data, size);
+			panwrap_indent--;
+			panwrap_log("Instead got:\n");
+			panwrap_indent++;
+			panwrap_log_hexdump_trimmed(buffer, size);
+			panwrap_indent--;
+
+			abort();
+		}
+	}
+}
+
+void
+panwrap_assert_gpu_mem_zero(const struct panwrap_mapped_memory *mem,
+			    mali_ptr gpu_va, size_t size)
+{
+	const char *buffer = panwrap_deref_gpu_mem(mem, gpu_va, size);
+
+	for (size_t i = 0; i < size; i++) {
+		if (buffer[i] != '\0') {
+			panwrap_log("At " MALI_PTR_FORMAT ", expected all 0 but got:\n",
+				    gpu_va);
+			panwrap_indent++;
+			panwrap_log_hexdump_trimmed(buffer, size);
+			panwrap_indent--;
+
+			abort();
+		}
+	}
+}
+
 void __attribute__((noreturn))
 __panwrap_deref_mem_err(const struct panwrap_mapped_memory *mem,
 			mali_ptr gpu_va, size_t size,
@@ -180,21 +223,28 @@ __panwrap_deref_mem_err(const struct panwrap_mapped_memory *mem,
 {
 	panwrap_indent = 0;
 	panwrap_log("\n");
-	panwrap_log("OUT OF BOUNDS GPU_VA ACCESS @"
+
+	panwrap_log("INVALID GPU MEMORY ACCESS @"
 		    MALI_PTR_FORMAT " - " MALI_PTR_FORMAT ":\n",
 		    gpu_va, gpu_va + size);
-	panwrap_log("Occurred at line %d of %s\n",
-		    line, filename);
-	panwrap_log("Mapping information:\n");
-	panwrap_indent++;
-	panwrap_log("CPU VA: %p - %p\n",
-		    mem->addr, mem->addr + mem->length);
-	panwrap_log("GPU VA: " MALI_PTR_FORMAT " - " MALI_PTR_FORMAT "\n",
-		    mem->gpu_va, (mali_ptr)(mem->gpu_va + mem->length));
-	panwrap_log("Length: %zu bytes\n", mem->length);
-	panwrap_indent--;
-	panwrap_log("Access length was %zu (%zu out of bounds)\n",
-		    size, ((gpu_va - mem->gpu_va) + size) - mem->length);
+	panwrap_log("Occurred at line %d of %s\n", line, filename);
+
+	if (mem) {
+		panwrap_log("Mapping information:\n");
+		panwrap_indent++;
+		panwrap_log("CPU VA: %p - %p\n",
+			    mem->addr, mem->addr + mem->length);
+		panwrap_log("GPU VA: " MALI_PTR_FORMAT " - " MALI_PTR_FORMAT "\n",
+			    mem->gpu_va, (mali_ptr)(mem->gpu_va + mem->length));
+		panwrap_log("Length: %zu bytes\n", mem->length);
+		panwrap_indent--;
+		panwrap_log("Access length was %zu (%zu out of bounds)\n",
+			    size, ((gpu_va - mem->gpu_va) + size) - mem->length);
+	} else {
+		panwrap_log("GPU memory is not contained within known GPU VA mappings\n");
+
+	}
+
 	panwrap_log_flush();
 	abort();
 }
