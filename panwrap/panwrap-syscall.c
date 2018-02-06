@@ -362,7 +362,7 @@ dump_debugfs(unsigned int request) {
 	/* Create outd */
 	panwrap_timestamp(&tp);
 	snprintf(outd_name, sizeof(outd_name),
-		 "%ld.%ld-%s", tp.tv_sec, tp.tv_nsec, ioc_info->name);
+		 "%09ld.%09ld-%s", tp.tv_sec, tp.tv_nsec, ioc_info->name);
 
 	ret = mkdirat(dump_dir_fd, outd_name, 0777);
 	if (ret < 0) {
@@ -417,6 +417,19 @@ dump_debugfs(unsigned int request) {
 
 		close(mem_profile_fd);
 		close(mem_profile_out_fd);
+	}
+
+	{
+		int mmap_table_out_fd = openat(outd_fd, "mmap_table",
+					       O_WRONLY | O_CREAT);
+		if (mmap_table_out_fd < 0) {
+			fprintf(stderr, "Error: Failed to create mmap_table: %s\n",
+				strerror(errno));
+			abort();
+		}
+
+		panwrap_dump_mmap_table(mmap_table_out_fd);
+		close(mmap_table_out_fd);
 	}
 
 	close(outd_fd);
@@ -1168,6 +1181,7 @@ static void inline *panwrap_mmap_wrap(mmap_func *func,
 		break;
 	default:
 		panwrap_track_mmap(offset, ret, length, prot, flags);
+		dump_debugfs(MALI_IOCTL_MEM_ALLOC);
 		break;
 	}
 

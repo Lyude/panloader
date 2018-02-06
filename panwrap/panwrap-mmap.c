@@ -222,6 +222,20 @@ panwrap_assert_gpu_mem_zero(const struct panwrap_mapped_memory *mem,
 	}
 }
 
+/* XXX: we don't keep track of ioctl flag changes yet. There haven't been any
+ * I've seen thus far though, so hopefully we should be good
+ */
+void
+panwrap_dump_mmap_table(int fd) {
+	const struct panwrap_mapped_memory *pos;
+
+	list_for_each_entry(pos, &mmaps, node) {
+		dprintf(fd, MALI_PTR_FMT" %p %zx %x %x\n",
+			pos->gpu_va, pos->addr, pos->length,
+			pos->prot, pos->flags);
+	}
+}
+
 void __attribute__((noreturn))
 __panwrap_fetch_mem_err(const struct panwrap_mapped_memory *mem,
 			mali_ptr gpu_va, size_t size,

@@ -55,6 +55,8 @@ void panwrap_assert_gpu_same(const struct panwrap_mapped_memory *mem,
 void panwrap_assert_gpu_mem_zero(const struct panwrap_mapped_memory *mem,
 				 mali_ptr gpu_va, size_t size);
 
+void panwrap_dump_mmap_table(int fd);
+
 void __attribute__((noreturn))
 __panwrap_fetch_mem_err(const struct panwrap_mapped_memory *mem,
 			mali_ptr gpu_va, size_t size,
